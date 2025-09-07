@@ -87,6 +87,8 @@ app.use("/products", productRouter);
 app.use("/orders", orderRouter);
 app.use("/cart", cartRouter);
 app.use("/technicians",technicianRouter)
+app.use("/reviews", reviewRouter)
+
 
 app.listen(5000, () => {
   console.log("server started");

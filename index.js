@@ -12,10 +12,9 @@ import supplierRouter from "./routers/supplierRouter.js";
 import productRouter from "./routers/productRouter.js";
 import orderRouter from "./routers/orderRouter.js";
 import cartRouter from "./routers/cartRouter.js";
-
-// ✅ need this to map email -> userId if token lacks userId
 import User from "./models/user.js";
 import technicianRouter from "./routers/technicianRouter.js";
+import reviewRouter from "./routers/reviewRouter.js";
 
 dotenv.config();
 
@@ -35,10 +34,7 @@ mongoose
     console.error("Failed to connect to the database:", error);
   });
 
-/** ✅ Auth middleware:
- * - Verify JWT
- * - If token has email but NO userId, fetch userId from DB and attach to decoded
- */
+
 app.use(async (req, res, next) => {
   if (req.method === "OPTIONS") return next();
 
@@ -88,7 +84,6 @@ app.use("/orders", orderRouter);
 app.use("/cart", cartRouter);
 app.use("/technicians",technicianRouter)
 app.use("/reviews", reviewRouter)
-
 
 app.listen(5000, () => {
   console.log("server started");

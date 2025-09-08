@@ -1,50 +1,66 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
-    {
-        firstName : {
-            type : String,
-            required : true
-        },
-        lastName : {
-            type : String,
-            required : true
+  {
+    firstName: {
+         type: String, 
+         required: true 
         },
 
-        email : {
-            type : String,
-            required : true,
-            unique : true
-        },
+    lastName:  { 
+        type: String, 
+        required: true 
+    },
 
-        password : {
-            type : String,
-            required : true
-        },
 
-        phone :{
-            type : String,
-            default : " Not Given"
-        },
+    email:     { 
+        type: String, 
+        required: true, 
+        unique: true 
+    },
 
-         isBlock : {
-            type : Boolean,
-            default : false
-        },
+    password:  { 
+        type: String, 
+        required: true 
+    },
 
-        role : {
-            type : String,
-            default : "customer"
-        },
 
-        isEmailVerified : {
-            type : Boolean,
-            default : false
-        }
+    phone:     { 
+        type: String, 
+        default: "Not Given" 
+    },
 
-    }
-)
 
-const User = mongoose.model("users",userSchema)
+    isBlock:   { 
+        type: Boolean, 
+        default: false 
+    },
+
+    role:      { 
+        type: String, 
+        default: "customer" 
+    },
+
+    isEmailVerified: { 
+        type: Boolean, 
+        default: false 
+    },
+
+
+    image:     { 
+        type: String, 
+        default: null 
+    },
+
+  },
+  {
+
+    timestamps: true, 
+
+  }
+
+);
+
+const User = mongoose.model("users", userSchema);
 
 export default User;

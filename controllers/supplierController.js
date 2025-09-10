@@ -6,8 +6,8 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: process.env.EMAIL_USER, // Your email address from .env
-        pass: process.env.EMAIL_PASS, // Your email password or app-specific password from .env
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS, 
     },
 });
 
@@ -122,7 +122,7 @@ export function loginSupplier(req, res) {
 // Send Purchase Request Email to Supplier
 export async function sendPurchaseRequest(req, res) {
     const email = req.params.email;
-    const { item, quantity, requiredDate } = req.body;
+    const { item, quantity, requiredDate, note } = req.body; // <-- note ekath ganna
 
     try {
         // Find supplier by email
@@ -145,6 +145,7 @@ export async function sendPurchaseRequest(req, res) {
                     <li><strong>Quantity:</strong> ${quantity}</li>
                     <li><strong>Required Date:</strong> ${requiredDate}</li>
                 </ul>
+                ${note ? `<p><strong>Note:</strong> ${note}</p>` : ""}
                 <p>Please confirm the availability and provide a quotation at your earliest convenience.</p>
                 <p>Thank you,<br>Micro CCTV Security Solution</p>
             `,

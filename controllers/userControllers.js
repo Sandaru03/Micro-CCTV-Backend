@@ -8,10 +8,11 @@ import OTP from "../models/otp.js";
 
 dotenv.config();
 
+// Nodemailer setup
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
-  secure: false,
+  secure: false, // TLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -44,12 +45,8 @@ export function createUser(req, res) {
 
   user
     .save()
-    .then(() => {
-      res.json({ message: "User Created Successfully" });
-    })
-    .catch(() => {
-      res.json({ message: "Failed to create user" });
-    });
+    .then(() => res.json({ message: "User Created Successfully" }))
+    .catch(() => res.json({ message: "Failed to create user" }));
 }
 
 // Create Admin (Backend)
@@ -71,36 +68,26 @@ export function createAdmin(req, res) {
 
   user
     .save()
-    .then(() => {
-      res.json({
-        message: "Admin Created Successfully with default details",
-      });
-    })
-    .catch((error) => {
-      res.status(500).json({
-        message: "Failed to create admin",
-        error,
-      });
-    });
+    .then(() =>
+      res.json({ message: "Admin Created Successfully with default details" })
+    )
+    .catch((error) =>
+      res.status(500).json({ message: "Failed to create admin", error })
+    );
 }
 
 // login Users
 export function LoginUser(req, res) {
-  const email = req.body.email;
-  const password = req.body.password;
+  const { email, password } = req.body;
 
-  User.findOne({ email: email })
+  User.findOne({ email })
     .then((user) => {
-      if (!user) {
-        return res.status(404).json({ message: "User Not Found" });
-      }
+      if (!user) return res.status(404).json({ message: "User Not Found" });
 
-      // block check
-      if (user.isBlock) {
+      if (user.isBlock)
         return res
           .status(403)
           .json({ message: "Your account has been blocked. Please contact support." });
-      }
 
       const isPasswordCorrect = bcrypt.compareSync(password, user.password);
 
@@ -118,11 +105,7 @@ export function LoginUser(req, res) {
           process.env.JWT_SECRET
         );
 
-        res.json({
-          token: token,
-          message: "Login Successful",
-          role: user.role,
-        });
+        res.json({ token, message: "Login Successful", role: user.role });
       } else {
         res.status(403).json({ message: "Incorrect Password" });
       }
@@ -135,8 +118,7 @@ export function LoginUser(req, res) {
 
 // isAdmin
 export function isAdmin(req) {
-  if (req.user == null) return false;
-  return req.user.role === "admin";
+  return req.user?.role === "admin";
 }
 
 // Google Login
@@ -144,21 +126,19 @@ export async function googleLogin(req, res) {
   const googleToken = req.body.token;
 
   try {
-    const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo`, {
-      headers: { Authorization: `Bearer ${googleToken}` },
-    });
+    const response = await axios.get(
+      `https://www.googleapis.com/oauth2/v3/userinfo`,
+      { headers: { Authorization: `Bearer ${googleToken}` } }
+    );
 
     const userInfo = response.data;
-
     let user = await User.findOne({ email: userInfo.email });
 
     if (user) {
-      // block check
-      if (user.isBlock) {
+      if (user.isBlock)
         return res
           .status(403)
           .json({ message: "Your account has been blocked. Please contact support." });
-      }
 
       const token = jwt.sign(
         {
@@ -175,7 +155,6 @@ export async function googleLogin(req, res) {
 
       return res.json({ token, message: "Login Successful", role: user.role });
     } else {
-      // Create new user
       const newUser = new User({
         firstName: userInfo.given_name,
         lastName: userInfo.family_name,
@@ -213,14 +192,14 @@ export async function googleLogin(req, res) {
   }
 }
 
-// OTP
+// OTP send 
 export async function sendOTP(req, res) {
   const email = req.body.email;
   const otpCode = Math.floor(100000 + Math.random() * 900000);
 
   try {
-    await OTP.deleteMany({ email: email });
-    const newOTP = new OTP({ email: email, otp: otpCode });
+    await OTP.deleteMany({ email });
+    const newOTP = new OTP({ email, otp: otpCode });
     await newOTP.save();
 
     const message = {
@@ -229,43 +208,55 @@ export async function sendOTP(req, res) {
       subject: "Your OTP Code",
       text: `Your OTP code is ${otpCode}`,
     };
+
     transporter.sendMail(message, (error, info) => {
       if (error) {
-        console.error("Error sending email:", error);
-        res.status(500).json({ message: "Failed to send OTP" });
+        console.error("Error sending email details:", {
+          message: error.message,
+          code: error.code,
+          stack: error.stack,
+        });
+        return res.status(500).json({
+          message: "Failed to send OTP",
+          error: {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+          },
+        });
       } else {
-        console.log("Email sent:", info.response);
-        res.json({ message: "OTP sent successfully" });
+        console.log("Email sent successfully:", info.response);
+        return res.json({ message: "OTP sent successfully" });
       }
     });
-  } catch {
-    res.status(500).json({ message: "Failed to delete previous OTPs" });
+  } catch (e) {
+    console.error("Error in OTP flow:", e);
+    return res.status(500).json({
+      message: "Failed to delete previous OTPs or save new OTP",
+      error: e.message,
+      stack: e.stack,
+    });
   }
 }
 
 // Reset Password
 export async function resetPassword(req, res) {
-  const email = req.body.email;
-  const newPassword = req.body.newPassword;
-  const otp = req.body.otp;
+  const { email, newPassword, otp } = req.body;
 
   try {
-    const otpRecord = await OTP.findOne({ email: email, otp: otp });
-    if (!otpRecord) {
-      return res.status(404).json({ message: "Invalid OTP" });
-    }
+    const otpRecord = await OTP.findOne({ email, otp });
+    if (!otpRecord) return res.status(404).json({ message: "Invalid OTP" });
 
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
-    await User.updateOne({ email: email }, { password: hashedPassword });
-    await OTP.deleteMany({ email: email });
+    await User.updateOne({ email }, { password: hashedPassword });
+    await OTP.deleteMany({ email });
 
     res.json({ message: "Password reset successfully" });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ message: "Failed to reset password" });
   }
 }
@@ -282,13 +273,11 @@ export const getAdmins = async (req, res) => {
 
 // Delete admin by email
 export const deleteAdmin = async (req, res) => {
-  const email = req.params.email;
+  const { email } = req.params;
 
   try {
-    const deleted = await User.findOneAndDelete({ email: email, role: "admin" });
-    if (!deleted) {
-      return res.status(404).json({ message: "Admin not found" });
-    }
+    const deleted = await User.findOneAndDelete({ email, role: "admin" });
+    if (!deleted) return res.status(404).json({ message: "Admin not found" });
     res.json({ message: "Admin deleted successfully", deleted });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete admin", error });
@@ -297,17 +286,12 @@ export const deleteAdmin = async (req, res) => {
 
 // Current user profile
 export function getUser(req, res) {
-  if (!req.user || !req.user.email) {
-    console.error("No user data in token:", req.user);
-    return res.status(401).json({ message: "Unauthorized: No user data found in token" });
-  }
+  if (!req.user?.email) return res.status(401).json({ message: "Unauthorized: No user data found in token" });
 
   User.findOne({ email: req.user.email })
     .then((user) => {
-      if (!user) {
-        console.error("User not found for email:", req.user.email);
-        return res.status(404).json({ message: "User not found in database" });
-      }
+      if (!user) return res.status(404).json({ message: "User not found in database" });
+
       res.json({
         firstName: user.firstName || "Not Provided",
         lastName: user.lastName || "Not Provided",
@@ -320,29 +304,23 @@ export function getUser(req, res) {
         createdAt: user.createdAt,
       });
     })
-    .catch((error) => {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user details", error: error.message });
-    });
+    .catch((error) => res.status(500).json({ message: "Failed to fetch user details", error: error.message }));
 }
 
-/* NEW: Customers list + Block/Unblock*/
-
-// users/customers  (Admins only)
+/* Customers list + Block/Unblock (Admins only) */
 export const getCustomers = async (req, res) => {
   if (!ensureAdmin(req, res)) return;
 
   try {
     const customers = await User.find({ role: "customer" })
       .select("firstName lastName email phone role isBlock isEmailVerified createdAt")
-      .sort({ createdAt: -1 }); // newest signups first
+      .sort({ createdAt: -1 });
     res.json(customers);
   } catch (error) {
     res.status(500).json({ message: "Failed to load customers", error });
   }
 };
 
-//users/customers/:email/block  (Admins only)
 export const setCustomerBlock = async (req, res) => {
   if (!ensureAdmin(req, res)) return;
 
@@ -358,9 +336,9 @@ export const setCustomerBlock = async (req, res) => {
         projection: "firstName lastName email phone role isBlock isEmailVerified",
       }
     );
-    if (!updated) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
+
+    if (!updated) return res.status(404).json({ message: "Customer not found" });
+
     res.json({
       message: updated.isBlock ? "Customer blocked" : "Customer unblocked",
       customer: updated,

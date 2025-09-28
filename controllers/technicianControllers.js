@@ -1,18 +1,9 @@
-// controllers/technicianControllers.js
 import bcrypt from "bcrypt";
 import Technician from "../models/technician.js";
 import { isAdmin } from "./userControllers.js";
 
-/**
- * ✅ DEV-ONLY Technician Login (no JWT)
- * POST /technicians/login
- * body: { email, password }
- * resp: { token: "dev-tech-token", technician }
- *
- * NOTE:
- * - PRODUCTION එකට මේක හරි නෑ. මෙක local/dev usage පමණයි.
- * - Frontend needs a "token", so we return a static one.
- */
+
+
 export async function loginTechnician(req, res) {
   try {
     const { email, password } = req.body || {};
